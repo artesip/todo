@@ -57,7 +57,7 @@ services:
     env_file:
       - path: ./.env
     volumes:
-      - .:/docker-entrypoint-initdb.d
+      - ./grpc-auth/init.sql:/docker-entrypoint-initdb.d/init.sql
       - pg_data:/var/lib/postgresql
     ports:
       - "127.0.0.1:7432:5432"
@@ -73,7 +73,7 @@ services:
       - POSTGRES_USER=${DB_USER_NOTES}
       - POSTGRES_PASSWORD=${DB_PASSWORD_NOTES}
     volumes:
-      - ./src/main/resources/init.sql:/docker-entrypoint-initdb.d/init.sql
+      - ./note-service/src/main/resources/init.sql:/docker-entrypoint-initdb.d/init.sql
       - notes_storage:/var/lib/postgresql
     ports:
       - "127.0.0.1:8432:5432"

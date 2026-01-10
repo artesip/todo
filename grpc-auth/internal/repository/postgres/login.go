@@ -9,6 +9,8 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
+var UserNotFound = errors.New("user not found")
+
 func (r *repository) Login(ctx context.Context, username string) (domain.UserDTO, error) {
 	const query = `
 		SELECT id, username, password
@@ -22,7 +24,7 @@ func (r *repository) Login(ctx context.Context, username string) (domain.UserDTO
 		Scan(&user.ID, &user.Username, &user.Password)
 
 	if errors.Is(err, pgx.ErrNoRows) {
-		return domain.UserDTO{}, errors.New("user not found")
+		return domain.UserDTO{}, UserNotFound
 	}
 
 	if err != nil {

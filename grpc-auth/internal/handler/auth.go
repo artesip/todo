@@ -35,8 +35,10 @@ func (h *authHandler) Login(c echo.Context) error {
 	}
 
 	user, err := h.repo.Login(c.Request().Context(), login.Username)
-	if err != nil {
-		return err
+	if err != nil && errors.Is(err, postgres.UserNotFound) {
+		return echo.NewHTTPError(http.StatusNotFound, err.Error())
+	} else if err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
 	}
 
 	isEqual := hash.CheckPasswordHash(login.Password, user.Password)

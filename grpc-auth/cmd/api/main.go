@@ -11,10 +11,13 @@ import (
 	"grpc-auth/pkg/config"
 	"grpc-auth/pkg/jwt"
 	grpc_auth "grpc-auth/proto"
+	"log/slog"
 	"net"
+	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/labstack/echo/v4/middleware"
+	"github.com/labstack/gommon/log"
 	"github.com/lestrrat-go/jwx/v2/jwk"
 	"google.golang.org/grpc"
 
@@ -22,8 +25,8 @@ import (
 )
 
 const (
-	jwtPath    = "./jwt.key"
-	configPath = "./config.yml"
+	jwtPath    = "jwt.key"
+	configPath = "config.yml"
 )
 
 func main() {
@@ -91,7 +94,26 @@ func grpcServerStart(cfg *domain.Config, key jwk.Key) {
 	if err != nil {
 		panic(fmt.Sprintf("failed to listen: %v", err))
 	}
-	s := grpc.NewServer()
+
+	s := grpc.NewServer(
+		grpc.UnaryInterceptor(func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo,
+			handler grpc.UnaryHandler) (interface{}, error) {
+			start := time.Now()
+
+			resp, err := handler(ctx, req)
+
+			duration := time.Since(start)
+
+			log.Info("gRPC request received ",
+				slog.String("method", info.FullMethod),
+				slog.Duration("duration", duration),
+				slog.Any("error", err),
+			)
+
+			return resp, err
+		}),
+	)
+
 	grpc_auth.RegisterAuthServiceServer(s, server)
 	fmt.Printf("grpc server listening at %v\n", lis.Addr())
 	if err := s.Serve(lis); err != nil {
