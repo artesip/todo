@@ -2,10 +2,17 @@ volumes:
   pg_data:
     name: notes_pg_data
 
+  notes_storage:
+    name: notes_service_volume
+
 networks:
   network:
     driver: bridge
     name: notes_network
+
+  notes_net:
+    driver: bridge
+    name: notes_service_network
 
 services:
   auth1:
@@ -56,4 +63,85 @@ services:
       - "127.0.0.1:7432:5432"
     networks:
       - network
+    restart: always
+
+  notes_db_instance:
+    image: postgres:18
+    container_name: notes_db_new
+    environment:
+      - POSTGRES_DB=${DB_NAME_NOTES}
+      - POSTGRES_USER=${DB_USER_NOTES}
+      - POSTGRES_PASSWORD=${DB_PASSWORD_NOTES}
+    volumes:
+      - ./src/main/resources/init.sql:/docker-entrypoint-initdb.d/init.sql
+      - notes_storage:/var/lib/postgresql
+    ports:
+      - "127.0.0.1:8432:5432"
+    networks:
+      - notes_net
+    restart: always
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  note_app_1:
+    container_name: note_srv_1
+    build:
+      context: note-service
+    ports:
+      - "9080:8080"
+    environment:
+      - DB_HOST=notes_db_instance
+      - DB_PORT=5432
+      - DB_NAME=${DB_NAME_NOTES}
+      - DB_USER=${DB_USER_NOTES}
+      - DB_PASS=${DB_PASSWORD_NOTES}
+      - AUTH_SERVICE_HOST=host.docker.internal
+    networks:
+      - notes_net
+    depends_on:
+      notes_db_instance:
+        condition: service_healthy
+    restart: always
+
+  note_app_2:
+    container_name: note_srv_2
+    build:
+      context: note-service
+    ports:
+      - "9081:8080"
+    environment:
+      - DB_HOST=notes_db_instance
+      - DB_PORT=5432
+      - DB_NAME=${DB_NAME_NOTES}
+      - DB_USER=${DB_USER_NOTES}
+      - DB_PASS=${DB_PASSWORD_NOTES}
+      - AUTH_SERVICE_HOST=host.docker.internal
+    networks:
+      - notes_net
+    depends_on:
+      notes_db_instance:
+        condition: service_healthy
+    restart: always
+
+  note_app_3:
+    container_name: note_srv_3
+    build:
+      context: note-service
+    ports:
+      - "9082:8080"
+    environment:
+      - DB_HOST=notes_db_instance
+      - DB_PORT=5432
+      - DB_NAME=${DB_NAME_NOTES}
+      - DB_USER=${DB_USER_NOTES}
+      - DB_PASS=${DB_PASSWORD_NOTES}
+      - AUTH_SERVICE_HOST=host.docker.internal
+    networks:
+      - notes_net
+    depends_on:
+      notes_db_instance:
+        condition: service_healthy
     restart: always
