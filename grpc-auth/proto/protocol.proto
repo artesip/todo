@@ -1,0 +1,15 @@
+syntax = "proto3";
+
+option go_package = "proto/grpc-auth";
+
+service AuthService {
+  rpc IsValidToken(TokenRequest) returns (IsValidTokenRequest) {}
+}
+
+message TokenRequest {
+  string token = 1;
+}
+
+message IsValidTokenRequest {
+  bool valid = 1;
+}

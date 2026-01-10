@@ -1,0 +1,59 @@
+volumes:
+  pg_data:
+    name: notes_pg_data
+
+networks:
+  network:
+    driver: bridge
+    name: notes_network
+
+services:
+  auth1:
+    container_name: todo_auth_1
+    build:
+      context: grpc-auth
+    ports:
+      - "8000:8000"
+      - "9000:9000"
+    networks:
+      - network
+    restart: always
+
+  auth2:
+    container_name: todo_auth_2
+    build:
+      context: grpc-auth
+    ports:
+      - "8001:8000"
+      - "9001:9000"
+    networks:
+      - network
+    restart: always
+
+  auth3:
+    container_name: todo_auth_3
+    build:
+      context: grpc-auth
+    ports:
+      - "8002:8000"
+      - "9002:9000"
+    networks:
+      - network
+    restart: always
+
+  user_todo_db:
+    image: postgres:18
+    container_name: user_todo_db
+    environment:
+      - POSTGRES_PASSWORD=${DB_PASSWORD}
+      - POSTGRES_USER=${DB_USER}
+    env_file:
+      - path: ./.env
+    volumes:
+      - .:/docker-entrypoint-initdb.d
+      - pg_data:/var/lib/postgresql
+    ports:
+      - "127.0.0.1:7432:5432"
+    networks:
+      - network
+    restart: always
