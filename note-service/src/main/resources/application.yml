@@ -13,5 +13,5 @@ spring:
 grpc:
   client:
     auth-service:
-      address: 'static://${AUTH_SERVICE_HOST:localhost}:${AUTH_SERVICE_PORT:9000}'
+      address: 'dns:///auth-service-hub:9000'
       negotiationType: plaintext

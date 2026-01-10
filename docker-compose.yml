@@ -10,10 +10,6 @@ networks:
     driver: bridge
     name: notes_network
 
-  notes_net:
-    driver: bridge
-    name: notes_service_network
-
 services:
   auth1:
     container_name: todo_auth_1
@@ -23,7 +19,9 @@ services:
       - "8000:8000"
       - "9000:9000"
     networks:
-      - network
+      network:
+        aliases:
+          - auth-service-hub
     restart: always
 
   auth2:
@@ -34,7 +32,9 @@ services:
       - "8001:8000"
       - "9001:9000"
     networks:
-      - network
+      network:
+        aliases:
+          - auth-service-hub
     restart: always
 
   auth3:
@@ -45,7 +45,9 @@ services:
       - "8002:8000"
       - "9002:9000"
     networks:
-      - network
+      network:
+        aliases:
+          - auth-service-hub
     restart: always
 
   user_todo_db:
@@ -78,7 +80,7 @@ services:
     ports:
       - "127.0.0.1:8432:5432"
     networks:
-      - notes_net
+      - network
     restart: always
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
@@ -98,9 +100,9 @@ services:
       - DB_NAME=${DB_NAME_NOTES}
       - DB_USER=${DB_USER_NOTES}
       - DB_PASS=${DB_PASSWORD_NOTES}
-      - AUTH_SERVICE_HOST=host.docker.internal
+      - AUTH_SERVICE_HOST=auth-service-hub
     networks:
-      - notes_net
+      - network
     depends_on:
       notes_db_instance:
         condition: service_healthy
@@ -118,9 +120,9 @@ services:
       - DB_NAME=${DB_NAME_NOTES}
       - DB_USER=${DB_USER_NOTES}
       - DB_PASS=${DB_PASSWORD_NOTES}
-      - AUTH_SERVICE_HOST=host.docker.internal
+      - AUTH_SERVICE_HOST=auth-service-hub
     networks:
-      - notes_net
+      - network
     depends_on:
       notes_db_instance:
         condition: service_healthy
@@ -138,9 +140,9 @@ services:
       - DB_NAME=${DB_NAME_NOTES}
       - DB_USER=${DB_USER_NOTES}
       - DB_PASS=${DB_PASSWORD_NOTES}
-      - AUTH_SERVICE_HOST=host.docker.internal
+      - AUTH_SERVICE_HOST=auth-service-hub
     networks:
-      - notes_net
+      - network
     depends_on:
       notes_db_instance:
         condition: service_healthy
