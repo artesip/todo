@@ -194,54 +194,17 @@ services:
     networks:
       - network
     depends_on:
-      - note_app_1
-      - note_app_2
-      - note_app_3
+      - note_app
 
-  note_app_1:
-    container_name: note_srv_1
+  note_app:
     build:
       context: note-service
     env_file:
       - .env
-    environment:
-      - APP_INSTANCE_NAME=note_srv_1
     networks:
-      - network
-    depends_on:
-      notes_db_primary:
-        condition: service_healthy
-      pgbouncer:
-        condition: service_started
-    restart: always
-
-  note_app_2:
-    container_name: note_srv_2
-    build:
-      context: note-service
-    env_file:
-      - .env
-    environment:
-      - APP_INSTANCE_NAME=note_srv_2
-    networks:
-      - network
-    depends_on:
-      notes_db_primary:
-        condition: service_healthy
-      pgbouncer:
-        condition: service_started
-    restart: always
-
-  note_app_3:
-    container_name: note_srv_3
-    build:
-      context: note-service
-    env_file:
-      - .env
-    environment:
-      - APP_INSTANCE_NAME=note_srv_3
-    networks:
-      - network
+      network:
+        aliases:
+          - note-service-pool
     depends_on:
       notes_db_primary:
         condition: service_healthy

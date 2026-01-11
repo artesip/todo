@@ -31,7 +31,7 @@ spring:
     hibernate:
       ddl-auto: none
   application:
-    name: ${APP_INSTANCE_NAME:unknown-service}
+    name: ${HOSTNAME:unknown-service}
 
 logging:
   pattern:
