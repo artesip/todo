@@ -84,7 +84,7 @@ export default function LoginForm() {
           )}
         />
 
-        <Button type="submit" className="w-full">
+        <Button type="submit" className="w-full cursor-pointer">
           Войти
         </Button>
       </form>
