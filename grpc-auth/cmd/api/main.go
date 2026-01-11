@@ -67,6 +67,7 @@ func serverStart(cfg *domain.Config, repo postgres.Repository) {
 			return nil
 		},
 	}))
+	e.Use(middleware.CORSWithConfig(middleware.CORSConfig{}))
 
 	key, err := jwt.LoadKey(jwtPath)
 	if err != nil {
@@ -76,6 +77,7 @@ func serverStart(cfg *domain.Config, repo postgres.Repository) {
 	authHandler := handler.NewAuthHandler(repo, key)
 
 	e.POST("/auth/login", authHandler.Login)
+	e.POST("/auth/logout", authHandler.Logout)
 	e.POST("/auth/registration", authHandler.Registration)
 
 	go grpcServerStart(cfg, key)

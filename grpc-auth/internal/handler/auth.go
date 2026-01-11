@@ -21,6 +21,7 @@ type authHandler struct {
 
 type AuthHandler interface {
 	Login(c echo.Context) error
+	Logout(c echo.Context) error
 	Registration(c echo.Context) error
 }
 
@@ -76,6 +77,20 @@ func (h *authHandler) Registration(c echo.Context) error {
 	}
 
 	return c.JSON(http.StatusOK, id)
+}
+
+func (h *authHandler) Logout(c echo.Context) error {
+	c.SetCookie(&http.Cookie{
+		Name:     "auth",
+		SameSite: http.SameSiteLaxMode,
+		Value:    "",
+		Expires:  time.Time{},
+		Path:     "/",
+		Secure:   false,
+		HttpOnly: true,
+	})
+
+	return c.NoContent(http.StatusNoContent)
 }
 
 func (h *authHandler) addJwtCookie(c echo.Context, userID string) error {
