@@ -1,7 +1,12 @@
 volumes:
   pg_data:
     name: notes_pg_data
-
+  notes_primary_data:
+    name: notes_primary_data
+  postgresql_replica1_data:
+    name: postgresql_replica1_data
+  postgresql_replica2_data:
+    name: postgresql_replica2_data
   notes_storage:
     name: notes_service_volume
 
@@ -75,26 +80,109 @@ services:
       - network
     restart: always
 
-  notes_db_instance:
-    image: postgres:18
-    container_name: notes_db_new
+  notes_db_primary:
+    image: bitnami/postgresql:latest
+    container_name: notes_db_primary
     environment:
-      - POSTGRES_DB=${DB_NAME_NOTES}
-      - POSTGRES_USER=${DB_USER_NOTES}
-      - POSTGRES_PASSWORD=${DB_PASSWORD_NOTES}
+      - POSTGRESQL_DATABASE=${DB_NAME_NOTES}
+      - POSTGRESQL_USERNAME=${DB_USER_NOTES}
+      - POSTGRESQL_PASSWORD=${DB_PASSWORD_NOTES}
+      - POSTGRESQL_REPLICATION_MODE=master
+      - POSTGRESQL_REPLICATION_USER=repl_user
+      - POSTGRESQL_REPLICATION_PASSWORD=repl_password
+      - ALLOW_EMPTY_PASSWORD=yes
+      - POSTGRESQL_LOG_STATEMENT=all
+      - POSTGRESQL_LOG_CONNECTIONS=on
     volumes:
       - ./note-service/src/main/resources/init.sql:/docker-entrypoint-initdb.d/init.sql
-      - notes_storage:/var/lib/postgresql
+      - notes_primary_data:/bitnami/postgresql
+    networks:
+      - network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER_NOTES} -d ${DB_NAME_NOTES}"]
+      interval: 5s
+      retries: 5
     ports:
-      - "127.0.0.1:8432:5432"
+      - "5432:5432"
+
+  notes_db_replica_1:
+    image: bitnami/postgresql:latest
+    container_name: notes_db_replica_1
+    depends_on:
+      - notes_db_primary
+    environment:
+      - POSTGRESQL_USERNAME=postgres
+      - POSTGRESQL_PASSWORD=${DB_PASSWORD_NOTES}
+      - POSTGRESQL_DATABASE=${DB_NAME_NOTES}
+      - POSTGRESQL_REPLICATION_MODE=slave
+      - POSTGRESQL_REPLICATION_USER=repl_user
+      - POSTGRESQL_REPLICATION_PASSWORD=repl_password
+      - POSTGRESQL_MASTER_HOST=notes_db_primary
+      - POSTGRESQL_MASTER_PORT_NUMBER=5432
+      - ALLOW_EMPTY_PASSWORD=yes
+      - POSTGRESQL_LOG_STATEMENT=all
+      - POSTGRESQL_LOG_CONNECTIONS=on
+    volumes:
+      - postgresql_replica1_data:/bitnami/postgresql
+    networks:
+      - network
+    ports:
+      - "5433:5432"
+    restart: always
+
+  notes_db_replica_2:
+    image: bitnami/postgresql:latest
+    container_name: notes_db_replica_2
+    depends_on:
+      - notes_db_primary
+    environment:
+      - POSTGRESQL_USERNAME=postgres
+      - POSTGRESQL_PASSWORD=${DB_PASSWORD_NOTES}
+      - POSTGRESQL_DATABASE=${DB_NAME_NOTES}
+      - POSTGRESQL_REPLICATION_MODE=slave
+      - POSTGRESQL_REPLICATION_USER=repl_user
+      - POSTGRESQL_REPLICATION_PASSWORD=repl_password
+      - POSTGRESQL_MASTER_HOST=notes_db_primary
+      - POSTGRESQL_MASTER_PORT_NUMBER=5432
+      - ALLOW_EMPTY_PASSWORD=yes
+      - POSTGRESQL_LOG_STATEMENT=all
+      - POSTGRESQL_LOG_CONNECTIONS=on
+    volumes:
+      - postgresql_replica2_data:/bitnami/postgresql
+    networks:
+      - network
+    ports:
+      - "5434:5432"
+    restart: always
+
+  pgbouncer:
+    image: edoburu/pgbouncer:latest
+    container_name: pgbouncer
+    depends_on:
+      - notes_db_primary
+      - notes_db_replica_1
+      - notes_db_replica_2
+    volumes:
+      - ./pgbouncer.ini:/etc/pgbouncer/pgbouncer.ini
+      - ./userlist.txt:/etc/pgbouncer/userlist.txt
+    ports:
+      - "6432:6432"
     networks:
       - network
     restart: always
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
+
+  haproxy_replicas:
+    image: haproxy:2.8
+    container_name: haproxy_replicas
+    volumes:
+      - ./haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro
+    networks:
+      - network
+    depends_on:
+      - notes_db_replica_1
+      - notes_db_replica_2
+    ports:
+      - "8404:8404"
 
   note_app_1:
     container_name: note_srv_1
@@ -102,18 +190,17 @@ services:
       context: note-service
     ports:
       - "9080:8080"
+    env_file:
+      - .env
     environment:
-      - DB_HOST=notes_db_instance
-      - DB_PORT=5432
-      - DB_NAME=${DB_NAME_NOTES}
-      - DB_USER=${DB_USER_NOTES}
-      - DB_PASS=${DB_PASSWORD_NOTES}
-      - AUTH_SERVICE_HOST=auth-service-hub
+      - APP_INSTANCE_NAME=note_srv_1
     networks:
       - network
     depends_on:
-      notes_db_instance:
+      notes_db_primary:
         condition: service_healthy
+      pgbouncer:
+        condition: service_started
     restart: always
 
   note_app_2:
@@ -122,18 +209,17 @@ services:
       context: note-service
     ports:
       - "9081:8080"
+    env_file:
+      - .env
     environment:
-      - DB_HOST=notes_db_instance
-      - DB_PORT=5432
-      - DB_NAME=${DB_NAME_NOTES}
-      - DB_USER=${DB_USER_NOTES}
-      - DB_PASS=${DB_PASSWORD_NOTES}
-      - AUTH_SERVICE_HOST=auth-service-hub
+      - APP_INSTANCE_NAME=note_srv_2
     networks:
       - network
     depends_on:
-      notes_db_instance:
+      notes_db_primary:
         condition: service_healthy
+      pgbouncer:
+        condition: service_started
     restart: always
 
   note_app_3:
@@ -142,16 +228,15 @@ services:
       context: note-service
     ports:
       - "9082:8080"
+    env_file:
+      - .env
     environment:
-      - DB_HOST=notes_db_instance
-      - DB_PORT=5432
-      - DB_NAME=${DB_NAME_NOTES}
-      - DB_USER=${DB_USER_NOTES}
-      - DB_PASS=${DB_PASSWORD_NOTES}
-      - AUTH_SERVICE_HOST=auth-service-hub
+      - APP_INSTANCE_NAME=note_srv_3
     networks:
       - network
     depends_on:
-      notes_db_instance:
+      notes_db_primary:
         condition: service_healthy
+      pgbouncer:
+        condition: service_started
     restart: always
