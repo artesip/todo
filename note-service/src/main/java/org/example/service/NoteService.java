@@ -18,22 +18,23 @@ public class NoteService {
     private NoteRepository repository;
 
     @Transactional(readOnly = true)
-    public List<Note> getAllActive() {
-        return repository.findAllByStatusNot(NoteStatus.ARCHIVE);
+    public List<Note> getAllActive(String userId) {
+        return repository.findAllByUserIdAndStatusNot(UUID.fromString(userId), NoteStatus.ARCHIVE);
     }
 
     @Transactional(readOnly = true)
-    public List<Note> getArchive() {
-        return repository.findAllByStatus(NoteStatus.ARCHIVE);
+    public List<Note> getArchive(String userId) {
+        return repository.findAllByUserIdAndStatus(UUID.fromString(userId), NoteStatus.ARCHIVE);
     }
 
     @Transactional(readOnly = true)
-    public Optional<Note> getById(UUID id) {
-        return repository.findById(id);
+    public Optional<Note> getById(UUID id, String userId) {
+        return repository.findByIdAndUserId(id, UUID.fromString(userId));
     }
 
     @Transactional
-    public Note create(Note note) {
+    public Note create(Note note, String userId) {
+        note.setUserId(UUID.fromString(userId));
         if (note.getStatus() == null) {
             note.setStatus(NoteStatus.NEW);
         }
@@ -41,17 +42,21 @@ public class NoteService {
     }
 
     @Transactional
-    public Note update(UUID id, Note data) {
-        Note note = repository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Note not found"));
+    public Note update(UUID id, Note data, String userId) {
+        Note note = repository.findByIdAndUserId(id, UUID.fromString(userId))
+                .orElseThrow(() -> new RuntimeException("Note not found or access denied"));
+
         note.setName(data.getName());
         note.setDesc(data.getDesc());
         note.setStatus(data.getStatus());
+
         return repository.save(note);
     }
 
     @Transactional
-    public void delete(UUID id) {
-        repository.deleteById(id);
+    public void delete(UUID id, String userId) {
+        Note note = repository.findByIdAndUserId(id, UUID.fromString(userId))
+                .orElseThrow(() -> new RuntimeException("Note not found or access denied"));
+        repository.delete(note);
     }
 }
