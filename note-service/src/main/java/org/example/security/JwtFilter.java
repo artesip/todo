@@ -1,27 +1,32 @@
 package org.example.security;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import org.example.service.AuthClient;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.Base64;
 import java.util.Collections;
 
 @Component
 public class JwtFilter extends OncePerRequestFilter {
+    private final AuthClient authClient;
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
-    @Autowired
-    private AuthClient authClient;
+    public JwtFilter(AuthClient authClient) {
+        this.authClient = authClient;
+    }
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
@@ -41,16 +46,29 @@ public class JwtFilter extends OncePerRequestFilter {
             return;
         }
 
-        if (!authClient.isTokenValid(token)) {
-            response.sendError(HttpServletResponse.SC_FORBIDDEN, "Invalid token");
-            return;
+        if (authClient.isTokenValid(token)) {
+            try {
+                String[] parts = token.split("\\.");
+                if (parts.length < 2) {
+                    throw new IllegalArgumentException("Invalid JWT format");
+                }
+
+                String payload = new String(Base64.getUrlDecoder().decode(parts[1]));
+                JsonNode jsonNode = objectMapper.readTree(payload);
+
+                String userId = jsonNode.get("sub").asText();
+
+                UsernamePasswordAuthenticationToken authentication =
+                        new UsernamePasswordAuthenticationToken(userId, null,
+                                Collections.singletonList(new SimpleGrantedAuthority("ROLE_USER")));
+
+                SecurityContextHolder.getContext().setAuthentication(authentication);
+
+            } catch (Exception e) {
+                response.sendError(HttpServletResponse.SC_FORBIDDEN, "Error parsing token data");
+                return;
+            }
         }
-
-
-        UsernamePasswordAuthenticationToken authentication =
-                new UsernamePasswordAuthenticationToken("user", null,
-                        Collections.singletonList(new SimpleGrantedAuthority("ROLE_USER")));
-        SecurityContextHolder.getContext().setAuthentication(authentication);
 
         filterChain.doFilter(request, response);
     }
