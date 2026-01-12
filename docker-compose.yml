@@ -105,9 +105,8 @@ services:
     ports:
       - "5432:5432"
 
-  notes_db_replica_1:
+  notes_db_replica:
     image: bitnami/postgresql:latest
-    container_name: notes_db_replica_1
     depends_on:
       - notes_db_primary
     environment:
@@ -125,34 +124,9 @@ services:
     volumes:
       - postgresql_replica1_data:/bitnami/postgresql
     networks:
-      - network
-    ports:
-      - "5433:5432"
-    restart: always
-
-  notes_db_replica_2:
-    image: bitnami/postgresql:latest
-    container_name: notes_db_replica_2
-    depends_on:
-      - notes_db_primary
-    environment:
-      - POSTGRESQL_USERNAME=postgres
-      - POSTGRESQL_PASSWORD=${DB_PASSWORD_NOTES}
-      - POSTGRESQL_DATABASE=${DB_NAME_NOTES}
-      - POSTGRESQL_REPLICATION_MODE=slave
-      - POSTGRESQL_REPLICATION_USER=repl_user
-      - POSTGRESQL_REPLICATION_PASSWORD=repl_password
-      - POSTGRESQL_MASTER_HOST=notes_db_primary
-      - POSTGRESQL_MASTER_PORT_NUMBER=5432
-      - ALLOW_EMPTY_PASSWORD=yes
-      - POSTGRESQL_LOG_STATEMENT=all
-      - POSTGRESQL_LOG_CONNECTIONS=on
-    volumes:
-      - postgresql_replica2_data:/bitnami/postgresql
-    networks:
-      - network
-    ports:
-      - "5434:5432"
+      network:
+        aliases:
+          - notes-replica-pool
     restart: always
 
   pgbouncer:
@@ -160,8 +134,7 @@ services:
     container_name: pgbouncer
     depends_on:
       - notes_db_primary
-      - notes_db_replica_1
-      - notes_db_replica_2
+      - haproxy_replicas
     volumes:
       - ./pgbouncer.ini:/etc/pgbouncer/pgbouncer.ini
       - ./userlist.txt:/etc/pgbouncer/userlist.txt
@@ -179,8 +152,8 @@ services:
     networks:
       - network
     depends_on:
-      - notes_db_replica_1
-      - notes_db_replica_2
+      - notes_db_primary
+      - notes_db_replica
     ports:
       - "8404:8404"
 
