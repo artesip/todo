@@ -88,6 +88,7 @@ func (h *authHandler) Logout(c echo.Context) error {
 		Path:     "/",
 		Secure:   false,
 		HttpOnly: true,
+		MaxAge: -1,
 	})
 
 	return c.NoContent(http.StatusNoContent)

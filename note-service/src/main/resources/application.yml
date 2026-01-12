@@ -45,3 +45,6 @@ grpc:
     auth-service:
       address: 'dns:///auth-service-hub:9000'
       negotiationType: plaintext
+      defaultLoadBalancingPolicy: round_robin
+      enableKeepAlive: true
+      keepAliveTime: 30s

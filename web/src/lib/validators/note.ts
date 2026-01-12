@@ -6,7 +6,7 @@ export const noteSchema = z.object({
     .string()
     .min(1, "Имя обязательно")
     .max(50, "Имя слишком длинное"),
-  description: z
+  desc: z
     .string()
     .optional(),
   status: z.enum(["NEW", "DONE", "ARCHIVE"], "Выберите статус"),

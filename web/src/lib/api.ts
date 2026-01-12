@@ -64,12 +64,14 @@ export async function getArchivedNotes(): Promise<Todo[]> {
 }
 
 export async function createNote(todo: NoteFormValues) {
+    console.log(todo)
+    
     return await fetch('/apii/api/notes', {
         method: 'POST',
         headers: {
             "Content-Type": "application/json",
         },
-        body: JSON.stringify({...todo, userId: '019bacf6-3602-7394-87de-22d29b0cc699'})
+        body: JSON.stringify(todo)
     })
 }
 

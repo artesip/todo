@@ -37,7 +37,7 @@ export default function NotesForm({defaultStatus, setIsOpen}: NotesFormProps) {
     resolver: zodResolver(noteSchema),
     defaultValues: {
       name: "",
-      description: "",
+      desc: "",
       status: defaultStatus,
     },
   });
@@ -72,7 +72,7 @@ export default function NotesForm({defaultStatus, setIsOpen}: NotesFormProps) {
 
         <FormField
           control={form.control}
-          name="description"
+          name="desc"
           render={({ field }) => (
             <FormItem className="grid gap-2">
               <FormLabel htmlFor="description">Описание</FormLabel>

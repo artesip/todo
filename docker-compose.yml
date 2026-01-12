@@ -17,46 +17,17 @@ networks:
 
 services:
   web:
-    container_name: todo_web
     build:
       context: web
-    ports:
-      - "3000:3000"
-    restart: always
-
-  auth1:
-    container_name: todo_auth_1
-    build:
-      context: grpc-auth
-    ports:
-      - "8000:8000"
-      - "9000:9000"
     networks:
       network:
         aliases:
-          - auth-service-hub
+          - web-hub
     restart: always
 
-  auth2:
-    container_name: todo_auth_2
+  auth:
     build:
       context: grpc-auth
-    ports:
-      - "8001:8000"
-      - "9001:9000"
-    networks:
-      network:
-        aliases:
-          - auth-service-hub
-    restart: always
-
-  auth3:
-    container_name: todo_auth_3
-    build:
-      context: grpc-auth
-    ports:
-      - "8002:8000"
-      - "9002:9000"
     networks:
       network:
         aliases:
@@ -103,7 +74,7 @@ services:
       interval: 5s
       retries: 5
     ports:
-      - "5432:5432"
+      - "127.0.0.1:5432:5432"
 
   notes_db_replica_1:
     image: bitnami/postgresql:latest
@@ -127,7 +98,7 @@ services:
     networks:
       - network
     ports:
-      - "5433:5432"
+      - "127.0.0.1:5433:5432"
     restart: always
 
   notes_db_replica_2:
@@ -152,7 +123,7 @@ services:
     networks:
       - network
     ports:
-      - "5434:5432"
+      - "127.0.0.1:5434:5432"
     restart: always
 
   pgbouncer:
@@ -166,7 +137,7 @@ services:
       - ./pgbouncer.ini:/etc/pgbouncer/pgbouncer.ini
       - ./userlist.txt:/etc/pgbouncer/userlist.txt
     ports:
-      - "6432:6432"
+      - "127.0.0.1:6432:6432"
     networks:
       - network
     restart: always
@@ -182,15 +153,39 @@ services:
       - notes_db_replica_1
       - notes_db_replica_2
     ports:
-      - "8404:8404"
+      - "127.0.0.1:8404:8404"
 
-  gateway:
+  note_gateway:
     image: nginx:latest
-    container_name: app_gateway
+    container_name: note_gateway
     volumes:
-      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./cfg/note_nginx.conf:/etc/nginx/nginx.conf:ro
     ports:
       - "8888:8888"
+    networks:
+      - network
+    depends_on:
+      - note_app
+  
+  auth_gateway:
+    image: nginx:latest
+    container_name: auth_gateway
+    volumes:
+      - ./cfg/auth_nginx.conf:/etc/nginx/nginx.conf:ro
+    ports:
+      - "9999:9999"
+    networks:
+      - network
+    depends_on:
+      - note_app
+
+  web_gateway:
+    image: nginx:latest
+    container_name: web_gateway
+    volumes:
+      - ./cfg/web_nginx.conf:/etc/nginx/nginx.conf:ro
+    ports:
+      - "7777:7777"
     networks:
       - network
     depends_on:
