@@ -220,4 +220,15 @@ services:
         condition: service_healthy
       pgbouncer:
         condition: service_started
+      rabbitmq:
+        condition: service_started
     restart: always
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: rabbitmq
+    ports:
+      - "5672:5672"
+      - "16672:15672"
+    networks:
+      - network
