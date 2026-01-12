@@ -93,7 +93,7 @@ services:
       - POSTGRESQL_LOG_STATEMENT=all
       - POSTGRESQL_LOG_CONNECTIONS=on
     volumes:
-      - postgresql_replica1_data:/bitnami/postgresql
+      - /bitnami/postgresql
     networks:
       network:
         aliases:

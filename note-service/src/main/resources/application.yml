@@ -40,6 +40,15 @@ logging:
     org.springframework.jdbc.datasource.lookup.AbstractRoutingDataSource: DEBUG
     org.hibernate.SQL: DEBUG
 
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "*"
+  endpoint:
+    refresh:
+      enabled: true
+
 grpc:
   client:
     auth-service:
