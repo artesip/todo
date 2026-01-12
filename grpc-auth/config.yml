@@ -3,7 +3,8 @@ server:
   grpc_port: 9000
 
 db:
-  url: "postgresql://root:1234@user_todo_db:5432/users_todo?"
+  read_url: "postgresql://root:1234@pgbouncer2:6432/auth_db_ro?sslmode=disable"
+  write_url: "postgresql://root:1234@pgbouncer2:6432/auth_db?sslmode=disable"
 
 jwt:
   path: "jwt.key"

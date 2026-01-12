@@ -4,7 +4,8 @@ import (
 	"errors"
 	"fmt"
 	"grpc-auth/internal/domain"
-	"grpc-auth/internal/repository/postgres"
+	"grpc-auth/internal/repository/postgres_read"
+	"grpc-auth/internal/repository/postgres_write"
 	"grpc-auth/pkg/hash"
 	"grpc-auth/pkg/jwt"
 	"net/http"
@@ -15,8 +16,9 @@ import (
 )
 
 type authHandler struct {
-	repo postgres.Repository
-	key  jwk.Key
+	repo   postgres_read.Repository
+	repoWr postgres_write.Repository
+	key    jwk.Key
 }
 
 type AuthHandler interface {
@@ -25,8 +27,8 @@ type AuthHandler interface {
 	Registration(c echo.Context) error
 }
 
-func NewAuthHandler(repo postgres.Repository, key jwk.Key) AuthHandler {
-	return &authHandler{repo: repo, key: key}
+func NewAuthHandler(readRepo postgres_read.Repository, writeRepo postgres_write.Repository, key jwk.Key) AuthHandler {
+	return &authHandler{repo: readRepo, repoWr: writeRepo, key: key}
 }
 
 func (h *authHandler) Login(c echo.Context) error {
@@ -36,7 +38,7 @@ func (h *authHandler) Login(c echo.Context) error {
 	}
 
 	user, err := h.repo.Login(c.Request().Context(), login.Username)
-	if err != nil && errors.Is(err, postgres.UserNotFound) {
+	if err != nil && errors.Is(err, postgres_read.UserNotFound) {
 		return echo.NewHTTPError(http.StatusNotFound, err.Error())
 	} else if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
@@ -63,9 +65,9 @@ func (h *authHandler) Registration(c echo.Context) error {
 	}
 
 	pwdHash, err := hash.HashPassword(registration.Password)
-	id, err := h.repo.Registration(c.Request().Context(), registration.Username, domain.PasswordHash(pwdHash))
+	id, err := h.repoWr.Registration(c.Request().Context(), registration.Username, domain.PasswordHash(pwdHash))
 
-	if err != nil && errors.Is(err, postgres.UserExists) {
+	if err != nil && errors.Is(err, postgres_write.UserExists) {
 		return echo.NewHTTPError(http.StatusConflict, err.Error())
 	} else if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
@@ -88,7 +90,7 @@ func (h *authHandler) Logout(c echo.Context) error {
 		Path:     "/",
 		Secure:   false,
 		HttpOnly: true,
-		MaxAge: -1,
+		MaxAge:   -1,
 	})
 
 	return c.NoContent(http.StatusNoContent)

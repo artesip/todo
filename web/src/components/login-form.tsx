@@ -36,7 +36,8 @@ export default function LoginForm() {
     if (!res.ok) {
       const data = await res.json();
       toast.error(data.message)
-    }
+      return;
+    } 
     
     router.push('/home')
   };

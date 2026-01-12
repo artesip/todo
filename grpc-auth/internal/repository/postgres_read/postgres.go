@@ -1,4 +1,4 @@
-package postgres
+package postgres_read
 
 import (
 	"context"
@@ -13,7 +13,6 @@ type repository struct {
 
 type Repository interface {
 	Login(ctx context.Context, username string) (domain.UserDTO, error)
-	Registration(ctx context.Context, username string, password domain.PasswordHash) (string, error)
 }
 
 func New(pool *pgxpool.Pool) Repository {

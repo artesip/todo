@@ -6,7 +6,8 @@ type ServerConfig struct {
 }
 
 type DBConfig struct {
-	Url string `yaml:"url"`
+	ReadUrl  string `yaml:"read_url"`
+	WriteUrl string `yaml:"write_url"`
 }
 
 type JwtConfig struct {

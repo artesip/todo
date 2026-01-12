@@ -32,7 +32,7 @@ export function Auth() {
                     <CardHeader>
                         <CardTitle>Регистрация</CardTitle>
                         <CardDescription>
-                            Введите логин и пароль чтобы зарегестрироваться
+                            Введите логин и пароль чтобы зарегистрироваться
                         </CardDescription>
                     </CardHeader>
                     <CardContent>

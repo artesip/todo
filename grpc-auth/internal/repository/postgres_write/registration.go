@@ -1,4 +1,4 @@
-package postgres
+package postgres_write
 
 import (
 	"context"

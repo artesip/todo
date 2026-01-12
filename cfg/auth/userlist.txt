@@ -1,0 +1,2 @@
+"notes_user" "notes_password"
+"root" "1234"

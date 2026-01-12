@@ -7,7 +7,8 @@ import (
 	"grpc-auth/internal/domain"
 	mygrpc "grpc-auth/internal/grpc"
 	"grpc-auth/internal/handler"
-	"grpc-auth/internal/repository/postgres"
+	"grpc-auth/internal/repository/postgres_read"
+	"grpc-auth/internal/repository/postgres_write"
 	"grpc-auth/pkg/config"
 	"grpc-auth/pkg/jwt"
 	grpc_auth "grpc-auth/proto"
@@ -35,12 +36,12 @@ func main() {
 		panic(err)
 	}
 
-	repo := initialize(&cfg)
-	serverStart(&cfg, repo)
+	readRepo, writeRepo := initialize(&cfg)
+	serverStart(&cfg, readRepo, writeRepo)
 }
 
-func initialize(cfg *domain.Config) postgres.Repository {
-	dbCfg, err := pgxpool.ParseConfig(cfg.DB.Url)
+func initPool(url string) *pgxpool.Pool {
+	dbCfg, err := pgxpool.ParseConfig(url)
 	if err != nil {
 		panic(err)
 	}
@@ -50,10 +51,17 @@ func initialize(cfg *domain.Config) postgres.Repository {
 		panic(err)
 	}
 
-	return postgres.New(pool)
+	return pool
 }
 
-func serverStart(cfg *domain.Config, repo postgres.Repository) {
+func initialize(cfg *domain.Config) (postgres_read.Repository, postgres_write.Repository) {
+	readPool := initPool(cfg.DB.ReadUrl)
+	writePool := initPool(cfg.DB.WriteUrl)
+
+	return postgres_read.New(readPool), postgres_write.New(writePool)
+}
+
+func serverStart(cfg *domain.Config, readRepo postgres_read.Repository, writeRepo postgres_write.Repository) {
 	e := echo.New()
 	e.Use(middleware.Recover())
 	e.Use(middleware.RequestLoggerWithConfig(middleware.RequestLoggerConfig{
@@ -74,7 +82,7 @@ func serverStart(cfg *domain.Config, repo postgres.Repository) {
 		panic(err)
 	}
 
-	authHandler := handler.NewAuthHandler(repo, key)
+	authHandler := handler.NewAuthHandler(readRepo, writeRepo, key)
 
 	e.POST("/auth/login", authHandler.Login)
 	e.POST("/auth/logout", authHandler.Logout)
