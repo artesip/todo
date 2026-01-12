@@ -3,12 +3,42 @@ server:
 
 spring:
   datasource:
-    url: jdbc:postgresql://${DB_HOST:localhost}:5432/${DB_NAME:notes_db}
-    username: ${DB_USER:postgres}
-    password: ${DB_PASS:123}
+    primary:
+      jdbc-url: jdbc:postgresql://pgbouncer:6432/notes_db?prepareThreshold=0
+      username: ${DB_USER_NOTES}
+      password: ${DB_PASSWORD_NOTES}
+      driver-class-name: org.postgresql.Driver
+      hikari:
+        pool-name: MasterHikariPool
+        maximum-pool-size: 10
+        minimum-idle: 5
+    replica:
+      jdbc-url: jdbc:postgresql://pgbouncer:6432/notes_db_ro?prepareThreshold=0
+      username: ${DB_USER_NOTES}
+      password: ${DB_PASSWORD_NOTES}
+      driver-class-name: org.postgresql.Driver
+      hikari:
+        pool-name: ReplicaHikariPool
+        maximum-pool-size: 10
+        max-lifetime: 10000
   jpa:
+    open-in-view: false
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        temp.use_jdbc_metadata_defaults: false
     hibernate:
-      ddl-auto: update
+      ddl-auto: none
+  application:
+    name: ${HOSTNAME:unknown-service}
+
+logging:
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level - [%boldYellow(%X{instance:-${spring.application.name}})] %msg%n"
+  level:
+    org.springframework.jdbc.datasource.lookup.AbstractRoutingDataSource: DEBUG
+    org.hibernate.SQL: DEBUG
 
 grpc:
   client:
